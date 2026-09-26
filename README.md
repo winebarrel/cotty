@@ -1,6 +1,7 @@
 # cotty
 
 [![CI](https://github.com/winebarrel/cotty/actions/workflows/ci.yml/badge.svg)](https://github.com/winebarrel/cotty/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/winebarrel/cotty/graph/badge.svg?token=0LCVFJMFeC)](https://codecov.io/gh/winebarrel/cotty)
 
 cotty shares a terminal session between you and an AI agent.
 
