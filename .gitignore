@@ -35,3 +35,8 @@ go.work.sum
 
 # GoReleaser output
 /dist/
+
+# Demo build, output and shell history
+/demo/cotty
+/demo/demo.gif
+/demo/home/.bash_history
