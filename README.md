@@ -14,6 +14,8 @@ You start a command such as `ssh` or a serial console under `cotty wrap` and use
    listens on ~/.cotty/sock/web1.sock <-------'
 ```
 
+![](https://github.com/user-attachments/assets/5e4799b4-d2af-417f-8254-5a81fc27e06c)
+
 ## Installation
 
 ```sh
