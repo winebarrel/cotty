@@ -30,3 +30,8 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+# Built binary (anchored, so cmd/cotty/ is not swept up too)
+/cotty
+
+# GoReleaser output
+/dist/
