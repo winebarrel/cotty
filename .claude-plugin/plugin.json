@@ -1,0 +1,10 @@
+{
+  "name": "cotty",
+  "description": "Work in terminals you share with the agent through cotty, such as ssh logins and serial consoles.",
+  "author": {
+    "name": "winebarrel"
+  },
+  "homepage": "https://github.com/winebarrel/cotty",
+  "repository": "https://github.com/winebarrel/cotty",
+  "license": "MIT"
+}

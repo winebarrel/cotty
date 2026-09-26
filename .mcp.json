@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "cotty": {
+      "command": "cotty",
+      "args": ["mcp"]
+    }
+  }
+}

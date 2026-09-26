@@ -1,0 +1,14 @@
+{
+  "name": "cotty",
+  "description": "cotty: share your terminals with an AI agent.",
+  "owner": {
+    "name": "winebarrel"
+  },
+  "plugins": [
+    {
+      "name": "cotty",
+      "source": "./",
+      "description": "Work in terminals you share with the agent through cotty, such as ssh logins and serial consoles."
+    }
+  ]
+}

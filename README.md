@@ -24,6 +24,26 @@ go install github.com/winebarrel/cotty/cmd/cotty@latest
 
 Or download a binary from the [releases](https://github.com/winebarrel/cotty/releases).
 
+### Agent setup
+
+The agent needs the MCP server, `cotty mcp`, and preferably the `cotty` skill, which tells it how to work in a session: waiting for prompts, avoiding full-screen programs, asking before changing anything, and never typing passwords.
+
+For Claude Code, install the plugin. It registers the MCP server and adds the skill:
+
+```sh
+claude plugin marketplace add winebarrel/cotty
+claude plugin install cotty@cotty
+```
+
+For other agents, install the skill with [skills](https://github.com/vercel-labs/skills) and register the MCP server with the agent. For Codex:
+
+```sh
+npx skills add winebarrel/cotty -a codex
+codex mcp add cotty -- cotty mcp
+```
+
+For any other MCP client, the server is the command `cotty` with the argument `mcp`.
+
 ## Usage
 
 Start a session with a name:
@@ -31,12 +51,6 @@ Start a session with a name:
 ```sh
 cotty wrap -n web1 ssh web1.example.com
 cotty wrap -n board picocom -b 115200 /dev/tty.usbserial-0001
-```
-
-Register the MCP server with the agent, for Claude Code:
-
-```sh
-claude mcp add cotty -- cotty mcp
 ```
 
 Then ask the agent to work in the session, for example "check the disk usage on web1".
@@ -54,10 +68,10 @@ Flags of `cotty wrap` go before the command; everything from the command on is p
 | `mcp --timeout` | `COTTY_TIMEOUT` | `30s` | How long a read waits when the agent does not say. |
 | `mcp --max-timeout` | `COTTY_MAX_TIMEOUT` | `10m` | Longest wait the agent may ask a read for. |
 
-Sizes take a unit of B, K, KB, KiB, M, MB or MiB, all powers of 1024. To change the `mcp` options, pass them when registering the server:
+Sizes take a unit of B, K, KB, KiB, M, MB or MiB, all powers of 1024. To change the `mcp` options, set the environment variables for the agent, or pass the flags when you register the server yourself:
 
 ```sh
-claude mcp add cotty -- cotty mcp --read-max 64KiB --max-timeout 30m
+codex mcp add cotty -- cotty mcp --read-max 64KiB --max-timeout 30m
 ```
 
 ```
@@ -95,12 +109,12 @@ Commands:
 | `send_key` | Press a special key such as `ctrl-c`, `up` or `tab`. |
 | `read` | Read the output that arrived since the previous read, as plain text. `wait_for` waits for a regular expression, `idle_ms` waits for the output to settle, and `tail_lines` returns the last lines instead. |
 
-To confirm each input while letting the agent read freely, allow only the read-only tools in Claude Code's permissions:
+To confirm each input while letting the agent read freely, allow only the read-only tools in Claude Code's permissions. With the plugin, the tools are named as follows:
 
 ```json
 {
   "permissions": {
-    "allow": ["mcp__cotty__list_sessions", "mcp__cotty__read"]
+    "allow": ["mcp__plugin_cotty_cotty__list_sessions", "mcp__plugin_cotty_cotty__read"]
   }
 }
 ```
