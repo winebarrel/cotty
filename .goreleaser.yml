@@ -8,5 +8,9 @@ builds:
       - -X main.version={{.Version}}
     env:
       - CGO_ENABLED=0
+    # cotty relies on Unix ptys and sockets, so it does not build for Windows.
+    goos:
+      - linux
+      - darwin
 checksum:
   name_template: "checksums.txt"
