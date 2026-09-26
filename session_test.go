@@ -68,3 +68,19 @@ func TestSessionsSkipsDeadSockets(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, ts.wait(t))
 }
+
+func TestListenCannotCreateDir(t *testing.T) {
+	home := shortTempDir(t)
+	require.NoError(t, os.WriteFile(home+"/sock", nil, 0o600))
+
+	_, err := (&Context{Home: home}).listen("a")
+	assert.Error(t, err)
+}
+
+func TestOpenLogCannotCreateDir(t *testing.T) {
+	home := shortTempDir(t)
+	require.NoError(t, os.WriteFile(home+"/log", nil, 0o600))
+
+	err := (&WrapCmd{Name: "a", Command: []string{"true"}}).Run(&Context{Home: home, Stdin: os.Stdin, Stdout: &syncBuffer{}})
+	assert.Error(t, err)
+}

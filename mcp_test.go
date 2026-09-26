@@ -158,6 +158,49 @@ func TestMCPCmdValidate(t *testing.T) {
 	}
 }
 
+func TestMCPDenied(t *testing.T) {
+	require := require.New(t)
+	home := shortTempDir(t)
+	ts := startSession(t, home, "deny", "cat")
+	cs := connectMCP(t, &Context{Home: home}, defaultMCPCmd())
+
+	ts.stdin.Write([]byte{prefixKey, prefixToggleAgent})
+
+	require.Eventually(func() bool {
+		text, isErr := callTool(t, cs, "send_key", map[string]any{"session": "deny", "key": "enter"})
+		return isErr && strings.Contains(text, "agent input is denied")
+	}, 5*time.Second, 10*time.Millisecond)
+
+	text, isErr := callTool(t, cs, "send", map[string]any{"session": "deny", "text": "x"})
+	assert.True(t, isErr)
+	assert.Contains(t, text, "agent input is denied")
+
+	ts.stdin.Write([]byte{prefixKey, prefixToggleAgent})
+
+	require.Eventually(func() bool {
+		_, isErr := callTool(t, cs, "send_key", map[string]any{"session": "deny", "key": "ctrl-d"})
+		return !isErr
+	}, 5*time.Second, 10*time.Millisecond)
+
+	require.NoError(ts.wait(t))
+}
+
+func TestMCPNotRunning(t *testing.T) {
+	cs := connectMCP(t, &Context{Home: shortTempDir(t)}, defaultMCPCmd())
+
+	calls := map[string]map[string]any{
+		"send":     {"session": "none", "text": "x"},
+		"send_key": {"session": "none", "key": "enter"},
+		"read":     {"session": "none"},
+	}
+
+	for tool, args := range calls {
+		text, isErr := callTool(t, cs, tool, args)
+		assert.True(t, isErr, tool)
+		assert.Contains(t, text, `session "none" is not running`, tool)
+	}
+}
+
 func TestMCPInvalidSession(t *testing.T) {
 	cs := connectMCP(t, &Context{Home: shortTempDir(t)}, defaultMCPCmd())
 

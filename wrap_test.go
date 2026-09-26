@@ -386,3 +386,18 @@ func TestWrapBufferSize(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, ts.wait(t))
 }
+
+func TestCopySizeNotTerminal(t *testing.T) {
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	defer r.Close()
+	defer w.Close()
+
+	ptmx, tty, err := pty.Open()
+	require.NoError(t, err)
+	defer ptmx.Close()
+	defer tty.Close()
+
+	assert.Error(t, copySize(r, ptmx))
+	assert.Error(t, copySize(tty, w))
+}
