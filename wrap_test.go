@@ -57,19 +57,25 @@ type testSession struct {
 func startSession(t *testing.T, home, name string, command ...string) *testSession {
 	t.Helper()
 
+	return startWrap(t, home, &WrapCmd{Name: name, Command: command})
+}
+
+func startWrap(t *testing.T, home string, wrap *WrapCmd) *testSession {
+	t.Helper()
+
 	r, w, err := os.Pipe()
 	require.NoError(t, err)
 
 	ts := &testSession{
 		ctx:   &Context{Home: home, Stdin: r, Stdout: &syncBuffer{}, ErrOutput: &syncBuffer{}},
-		name:  name,
+		name:  wrap.Name,
 		stdin: w,
 		done:  make(chan error, 1),
 	}
 	ts.out = ts.ctx.Stdout.(*syncBuffer)
 
 	go func() {
-		ts.done <- (&WrapCmd{Name: name, Command: command}).Run(ts.ctx)
+		ts.done <- wrap.Run(ts.ctx)
 	}()
 
 	t.Cleanup(func() {
@@ -352,6 +358,29 @@ func TestWrapOnTerminal(t *testing.T) {
 
 func TestExitError(t *testing.T) {
 	assert.EqualError(t, &ExitError{Code: 2}, "exit status 2")
+}
+
+func TestWrapReadOnly(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+	ts := startWrap(t, shortTempDir(t), &WrapCmd{Name: "ro", ReadOnly: true, Command: []string{"cat"}})
+
+	resp, err := ts.call(&request{Op: opInfo})
+	require.NoError(err)
+	assert.False(resp.Info.AgentInput)
+	assert.Contains(ts.out.String(), `[cotty] session "ro" started. agent input: denied.`)
+
+	_, err = ts.call(&request{Op: opSend, Data: "x"})
+	assert.ErrorContains(err, `agent input is denied in session "ro"`)
+
+	ts.stdin.Write([]byte{prefixKey, prefixToggleAgent})
+
+	require.Eventually(func() bool {
+		_, err := ts.call(&request{Op: opSend, Data: "\x04"})
+		return err == nil
+	}, 5*time.Second, 10*time.Millisecond)
+
+	require.NoError(ts.wait(t))
 }
 
 func TestWrapBufferSize(t *testing.T) {

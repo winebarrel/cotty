@@ -48,6 +48,7 @@ func (e *ExitError) Error() string {
 type WrapCmd struct {
 	Name       string   `short:"n" required:"" help:"Session name: letters, digits, '.', '_' and '-', up to 32 characters."`
 	BufferSize ByteSize `default:"1MiB" env:"COTTY_BUFFER_SIZE" help:"How much recent output to keep for the agent to read."`
+	ReadOnly   bool     `short:"r" env:"COTTY_READ_ONLY" help:"Start with the agent's input denied. Ctrl-] a allows it."`
 	Command    []string `arg:"" passthrough:"" help:"Command to run, with its arguments."`
 }
 
@@ -110,7 +111,7 @@ func (w *WrapCmd) Run(c *Context) error {
 		log:  logFile,
 	}
 
-	s.agentInput.Store(true)
+	s.agentInput.Store(!w.ReadOnly)
 
 	if isTerm {
 		oldState, err := term.MakeRaw(stdinFd)
@@ -146,7 +147,7 @@ func (w *WrapCmd) Run(c *Context) error {
 		}()
 	}
 
-	s.writeOut(fmt.Appendf(nil, "[cotty] session %q started. agent input: allowed. Ctrl-] ? for help\r\n", w.Name))
+	s.writeOut(fmt.Appendf(nil, "[cotty] session %q started. agent input: %s. Ctrl-] ? for help\r\n", w.Name, allowedWord(!w.ReadOnly)))
 
 	server := newSocketServer(ln, s.handle)
 	go server.Serve()
