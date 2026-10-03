@@ -64,6 +64,7 @@ Flags of `cotty wrap` go before the command; everything from the command on is p
 |------|----------------------|---------|-------------|
 | `--home` | `COTTY_HOME` | `~/.cotty` | Directory for session sockets and logs. |
 | `wrap --buffer-size` | `COTTY_BUFFER_SIZE` | `1MiB` | How much recent output to keep for the agent to read. |
+| `wrap -r`, `--read-only` | `COTTY_READ_ONLY` | `false` | Start with the agent's input denied. `Ctrl-]` `a` allows it. |
 | `mcp --read-max` | `COTTY_READ_MAX` | `32KiB` | Most output one read returns. Older output beyond it is dropped. |
 | `mcp --tail-lines` | `COTTY_TAIL_LINES` | `50` | Lines a read returns when it has no previous read to continue from. |
 | `mcp --timeout` | `COTTY_TIMEOUT` | `30s` | How long a read waits when the agent does not say. |
@@ -97,7 +98,7 @@ Commands:
 
 | Keys | Action |
 |------|--------|
-| `Ctrl-]` `a` | Allow or deny the agent's input (allowed at start) |
+| `Ctrl-]` `a` | Allow or deny the agent's input (allowed at start unless `--read-only`) |
 | `Ctrl-]` `?` | Show help |
 | `Ctrl-]` `Ctrl-]` | Send `Ctrl-]` to the command |
 
