@@ -44,6 +44,7 @@ type SessionInfo struct {
 	PID        int       `json:"pid"`
 	StartedAt  time.Time `json:"started_at"`
 	AgentInput bool      `json:"agent_input"`
+	Paused     bool      `json:"paused"`
 }
 
 type readReply struct {
@@ -54,4 +55,5 @@ type readReply struct {
 	Matched   bool   `json:"matched,omitempty"`
 	TimedOut  bool   `json:"timed_out,omitempty"`
 	Closed    bool   `json:"closed,omitempty"`
+	Paused    bool   `json:"paused,omitempty"`
 }

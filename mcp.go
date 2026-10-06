@@ -18,7 +18,7 @@ const mcpInstructions = `cotty gives you terminals that the user started with "c
 
 Call list_sessions to find them. To run something, call send and then read. read returns the output that arrived since your previous read of that session, so nothing is missed between calls. Use wait_for to wait for a prompt or other text, or idle_ms to wait until the output settles.
 
-The user can deny your input with a key binding; send then fails, and you should ask the user rather than retry.`
+The user can deny your input with a key binding; send then fails, and you should ask the user rather than retry. The user can also pause the output, for example while a secret is on the screen; read then says so, and you should wait for the user rather than act on what you cannot see.`
 
 // MCPCmd serves the sessions to an agent over MCP on stdio.
 type MCPCmd struct {
@@ -266,6 +266,8 @@ func formatRead(r *readReply, waitFor string) string {
 
 	if r.Closed {
 		notes = append(notes, "session ended")
+	} else if r.Paused {
+		notes = append(notes, "the user paused the output; new output is hidden until they resume it")
 	}
 
 	for _, note := range notes {

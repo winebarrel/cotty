@@ -15,6 +15,7 @@ func TestPrefixFilter(t *testing.T) {
 	}{
 		{"plain", []string{"ls\r"}, "ls\r", ""},
 		{"toggle", []string{"a\x1dab"}, "ab", "a"},
+		{"pause", []string{"\x1dp"}, "", "p"},
 		{"help", []string{"\x1d?"}, "", "?"},
 		{"literal prefix", []string{"\x1d\x1d"}, "\x1d", ""},
 		{"unbound", []string{"x\x1dzy"}, "xy", ""},

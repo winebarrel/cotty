@@ -6,7 +6,7 @@
 
 cotty shares a terminal session between you and an AI agent.
 
-You start a command such as `ssh` or a serial console under `cotty wrap` and use it as usual. The agent reads the same output and types into the same session through an MCP server, `cotty mcp`. Both of you can type at any time, and you can deny the agent's input with a key.
+You start a command such as `ssh` or a serial console under `cotty wrap` and use it as usual. The agent reads the same output and types into the same session through an MCP server, `cotty mcp`. Both of you can type at any time, and you can deny the agent's input or hide the output from it with a key.
 
 ```
 [your terminal]                          [agent, e.g. Claude Code]
@@ -99,6 +99,7 @@ Commands:
 | Keys | Action |
 |------|--------|
 | `Ctrl-]` `a` | Allow or deny the agent's input (allowed at start unless `--read-only`) |
+| `Ctrl-]` `p` | Pause or resume the output to the agent and the log |
 | `Ctrl-]` `?` | Show help |
 | `Ctrl-]` `Ctrl-]` | Send `Ctrl-]` to the command |
 
@@ -132,3 +133,4 @@ The command runs with `COTTY_SESSION=<name>` in its environment.
 
 - The agent sees the output from the start of the session, up to `--buffer-size`. The log keeps all of it.
 - Passwords you type at a prompt that turns echo off, as `ssh` and `sudo` do, never appear in the output, so the agent does not see them.
+- To show something the agent should not see, such as a password typed with echo on or a file with secrets, press `Ctrl-]` `p` first and again when done. Until then the output is shown only on your terminal: it is kept neither for the agent nor in the log, and the agent is told that the output is paused.
