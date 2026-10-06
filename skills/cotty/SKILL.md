@@ -54,4 +54,5 @@ If something is stuck or waiting, `send_key` `ctrl-c`, or `q` for a pager.
 - These are real machines, often in production. Before a command that changes anything (deleting files, restarting services, rebooting, changing configuration, writing to a device), tell the user what you will run and wait for their OK.
 - Never type passwords, passphrases or other secrets. At a password prompt, ask the user to type it in their terminal, then `read` to continue.
 - If `send` fails because agent input is denied, the user has blocked your input with Ctrl-] a. Stop and ask the user; do not retry.
+- If `read` says the user paused the output, the user is hiding something from you with Ctrl-] p. Do not send anything, since you cannot see the result; wait for the user to resume it.
 - If a session is not running, it has ended. Ask the user whether to start it again.

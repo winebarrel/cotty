@@ -228,6 +228,12 @@ type wrapSession struct {
 	info       SessionInfo
 	agentInput atomic.Bool
 
+	// paused stops recording the output for the agent and the log, so that
+	// the user can show secrets on the terminal. It changes under recMu so
+	// that no output is recorded after the pause is reported.
+	paused atomic.Bool
+	recMu  sync.Mutex
+
 	ptmx  *os.File
 	ptyMu sync.Mutex
 
@@ -272,15 +278,46 @@ func (s *wrapSession) pumpOutput() {
 
 		if n > 0 {
 			s.writeOut(buf[:n])
-			text := stripper.Strip(buf[:n])
-			s.buf.Write(text) //nolint:errcheck
-			s.log.Write(text) //nolint:errcheck
+			s.record(stripper.Strip(buf[:n]))
 		}
 
 		if err != nil {
 			return
 		}
 	}
+}
+
+// record keeps output for the agent and in the log unless the user has
+// paused it.
+func (s *wrapSession) record(text []byte) {
+	s.recMu.Lock()
+	defer s.recMu.Unlock()
+
+	if s.paused.Load() {
+		return
+	}
+
+	s.buf.Write(text) //nolint:errcheck
+	s.log.Write(text) //nolint:errcheck
+}
+
+// setPaused pauses or resumes recording. The agent and the log get a note at
+// the point where the output is left out.
+func (s *wrapSession) setPaused(paused bool) {
+	s.recMu.Lock()
+	defer s.recMu.Unlock()
+
+	if paused == s.paused.Load() {
+		return
+	}
+
+	if paused {
+		note := []byte("\n[cotty: the user paused the output here]\n")
+		s.buf.Write(note) //nolint:errcheck
+		s.log.Write(note) //nolint:errcheck
+	}
+
+	s.paused.Store(paused)
 }
 
 func (s *wrapSession) pumpInput(r io.Reader) {
@@ -316,8 +353,13 @@ func (s *wrapSession) runPrefixCommand(cmd byte) {
 		allowed := !s.agentInput.Load()
 		s.agentInput.Store(allowed)
 		s.notify("agent input: " + allowedWord(allowed))
+	case prefixTogglePause:
+		paused := !s.paused.Load()
+		s.setPaused(paused)
+		s.notify("agent output: " + pausedWord(paused))
 	case prefixHelp:
-		s.notify(fmt.Sprintf("Ctrl-] a: allow/deny agent input (now %s), Ctrl-] Ctrl-]: send Ctrl-]", allowedWord(s.agentInput.Load())))
+		s.notify(fmt.Sprintf("Ctrl-] a: allow/deny agent input (now %s), Ctrl-] p: pause/resume agent output (now %s), Ctrl-] Ctrl-]: send Ctrl-]",
+			allowedWord(s.agentInput.Load()), pausedWord(s.paused.Load())))
 	}
 }
 
@@ -329,11 +371,20 @@ func allowedWord(allowed bool) string {
 	return "denied"
 }
 
+func pausedWord(paused bool) string {
+	if paused {
+		return "paused"
+	}
+
+	return "recording"
+}
+
 func (s *wrapSession) handle(ctx context.Context, req *request) *response {
 	switch req.Op {
 	case opInfo:
 		info := s.info
 		info.AgentInput = s.agentInput.Load()
+		info.Paused = s.paused.Load()
 
 		return &response{Info: &info}
 	case opSend:
@@ -400,5 +451,6 @@ func (s *wrapSession) read(ctx context.Context, req *request) *response {
 		Matched:   res.Matched,
 		TimedOut:  res.TimedOut,
 		Closed:    res.Closed,
+		Paused:    s.paused.Load(),
 	}}
 }

@@ -262,6 +262,71 @@ func TestWrapDenyAgentInput(t *testing.T) {
 	require.NoError(ts.wait(t))
 }
 
+func TestWrapPause(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+	ts := startSession(t, shortTempDir(t), "pause", "cat")
+
+	_, err := ts.call(&request{Op: opSend, Data: "before\r"})
+	require.NoError(err)
+
+	resp, err := ts.call(&request{Op: opRead, WaitFor: `before\n`, TimeoutMs: 5000})
+	require.NoError(err)
+	require.True(resp.Read.Matched)
+	assert.False(resp.Read.Paused)
+	next := resp.Read.Next
+
+	ts.stdin.Write([]byte{prefixKey, prefixTogglePause})
+
+	require.Eventually(func() bool {
+		resp, err := ts.call(&request{Op: opInfo})
+		return err == nil && resp.Info.Paused
+	}, 5*time.Second, 10*time.Millisecond)
+
+	assert.Contains(ts.out.String(), "[cotty] agent output: paused")
+
+	ts.stdin.Write([]byte("secret\r"))
+
+	// The user still sees the output.
+	require.Eventually(func() bool {
+		return bytes.Count([]byte(ts.out.String()), []byte("secret")) == 2
+	}, 5*time.Second, 10*time.Millisecond)
+
+	ts.stdin.Write([]byte{prefixKey, prefixHelp})
+	require.Eventually(func() bool {
+		return bytes.Contains([]byte(ts.out.String()), []byte("Ctrl-] p: pause/resume agent output (now paused)"))
+	}, 5*time.Second, 10*time.Millisecond)
+
+	ts.stdin.Write([]byte{prefixKey, prefixTogglePause})
+
+	require.Eventually(func() bool {
+		resp, err := ts.call(&request{Op: opInfo})
+		return err == nil && !resp.Info.Paused
+	}, 5*time.Second, 10*time.Millisecond)
+
+	_, err = ts.call(&request{Op: opSend, Data: "after\r"})
+	require.NoError(err)
+
+	resp, err = ts.call(&request{Op: opRead, ID: resp.Read.ID, From: &next, WaitFor: `after\n`, TimeoutMs: 5000})
+	require.NoError(err)
+	require.True(resp.Read.Matched)
+	assert.Equal("\n[cotty: the user paused the output here]\nafter\nafter\n", resp.Read.Output)
+	assert.NotContains(resp.Read.Output, "secret")
+
+	_, err = ts.call(&request{Op: opSend, Data: "\x04"})
+	require.NoError(err)
+	require.NoError(ts.wait(t))
+
+	logs, err := filepath.Glob(filepath.Join(ts.ctx.Home, "log", "pause-*.log"))
+	require.NoError(err)
+	require.Len(logs, 1)
+
+	data, err := os.ReadFile(logs[0])
+	require.NoError(err)
+	assert.NotContains(string(data), "secret")
+	assert.Contains(string(data), "[cotty: the user paused the output here]")
+}
+
 func TestWrapBadRequests(t *testing.T) {
 	ts := startSession(t, shortTempDir(t), "bad", "cat")
 
