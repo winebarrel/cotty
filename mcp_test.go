@@ -222,6 +222,7 @@ func TestFormatRead(t *testing.T) {
 		{"truncated", readReply{Output: "a\n", Truncated: true}, "", "[cotty: earlier output was dropped]\na\n"},
 		{"idle timeout", readReply{Output: "a\n", TimedOut: true}, "", "a\n[cotty: timed out waiting for output to settle]\n"},
 		{"closed", readReply{Output: "bye\n", Closed: true}, "x", "bye\n[cotty: session ended]\n"},
+		{"redacted", readReply{Output: "pw [REDACTED]\n", Redacted: true}, "", "pw [REDACTED]\n[cotty: [REDACTED] marks text the user hid]\n"},
 		{"paused", readReply{Paused: true}, "", "[cotty: no new output]\n[cotty: the user paused the output; new output is hidden until they resume it]\n"},
 	}
 

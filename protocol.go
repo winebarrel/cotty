@@ -45,6 +45,9 @@ type SessionInfo struct {
 	StartedAt  time.Time `json:"started_at"`
 	AgentInput bool      `json:"agent_input"`
 	Paused     bool      `json:"paused"`
+
+	// Redacts is the number of --redact rules hiding text from the agent.
+	Redacts int `json:"redacts"`
 }
 
 type readReply struct {
@@ -56,4 +59,5 @@ type readReply struct {
 	TimedOut  bool   `json:"timed_out,omitempty"`
 	Closed    bool   `json:"closed,omitempty"`
 	Paused    bool   `json:"paused,omitempty"`
+	Redacted  bool   `json:"redacted,omitempty"`
 }

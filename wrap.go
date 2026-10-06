@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"regexp"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -49,10 +50,17 @@ type WrapCmd struct {
 	Name       string   `short:"n" required:"" help:"Session name: letters, digits, '.', '_' and '-', up to 32 characters."`
 	BufferSize ByteSize `default:"1MiB" env:"COTTY_BUFFER_SIZE" help:"How much recent output to keep for the agent to read."`
 	ReadOnly   bool     `short:"r" env:"COTTY_READ_ONLY" help:"Start with the agent's input denied. Ctrl-] a allows it."`
+	Redact     []string `sep:"\n" env:"COTTY_REDACT" placeholder:"KEYWORD" help:"Text to replace with [REDACTED] for the agent and in the log, or /regexp/. Repeatable; the environment variable takes one per line. Matches do not span lines."`
 	Command    []string `arg:"" passthrough:"" help:"Command to run, with its arguments."`
 }
 
 func (w *WrapCmd) Run(c *Context) error {
+	rules, err := parseRedactRules(w.Redact)
+
+	if err != nil {
+		return err
+	}
+
 	ln, err := c.listen(w.Name)
 
 	if err != nil {
@@ -104,11 +112,13 @@ func (w *WrapCmd) Run(c *Context) error {
 			Command:   w.Command,
 			PID:       cmd.Process.Pid,
 			StartedAt: startedAt,
+			Redacts:   len(rules),
 		},
 		ptmx: ptmx,
 		out:  c.Stdout,
 		buf:  newOutputBuffer(bufferSize),
 		log:  logFile,
+		red:  redactor{rules: rules},
 	}
 
 	s.agentInput.Store(!w.ReadOnly)
@@ -234,6 +244,9 @@ type wrapSession struct {
 	paused atomic.Bool
 	recMu  sync.Mutex
 
+	// red hides the --redact matches from what is recorded.
+	red redactor
+
 	ptmx  *os.File
 	ptyMu sync.Mutex
 
@@ -282,9 +295,23 @@ func (s *wrapSession) pumpOutput() {
 		}
 
 		if err != nil {
+			s.recMu.Lock()
+			s.write(s.red.Flush())
+			s.recMu.Unlock()
+
 			return
 		}
 	}
+}
+
+// write records text for the agent and in the log. recMu must be held.
+func (s *wrapSession) write(text []byte) {
+	if len(text) == 0 {
+		return
+	}
+
+	s.buf.Write(text) //nolint:errcheck
+	s.log.Write(text) //nolint:errcheck
 }
 
 // record keeps output for the agent and in the log unless the user has
@@ -297,8 +324,7 @@ func (s *wrapSession) record(text []byte) {
 		return
 	}
 
-	s.buf.Write(text) //nolint:errcheck
-	s.log.Write(text) //nolint:errcheck
+	s.write(s.red.Redact(text))
 }
 
 // setPaused pauses or resumes recording. The agent and the log get a note at
@@ -312,9 +338,10 @@ func (s *wrapSession) setPaused(paused bool) {
 	}
 
 	if paused {
-		note := []byte("\n[cotty: the user paused the output here]\n")
-		s.buf.Write(note) //nolint:errcheck
-		s.log.Write(note) //nolint:errcheck
+		// What is held back of the current line is dropped with the rest of
+		// the paused output.
+		s.red.Reset()
+		s.write([]byte("\n[cotty: the user paused the output here]\n"))
 	}
 
 	s.paused.Store(paused)
@@ -452,5 +479,6 @@ func (s *wrapSession) read(ctx context.Context, req *request) *response {
 		TimedOut:  res.TimedOut,
 		Closed:    res.Closed,
 		Paused:    s.paused.Load(),
+		Redacted:  s.info.Redacts > 0 && strings.Contains(string(res.Output), redactMark),
 	}}
 }

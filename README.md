@@ -64,6 +64,7 @@ Flags of `cotty wrap` go before the command; everything from the command on is p
 |------|----------------------|---------|-------------|
 | `--home` | `COTTY_HOME` | `~/.cotty` | Directory for session sockets and logs. |
 | `wrap --buffer-size` | `COTTY_BUFFER_SIZE` | `1MiB` | How much recent output to keep for the agent to read. |
+| `wrap --redact` | `COTTY_REDACT` | | Text to show as `[REDACTED]` to the agent and in the log. Between slashes, as in `/token=\S+/`, it is a regular expression. Repeat the flag for more, or put one per line in the environment variable. |
 | `wrap -r`, `--read-only` | `COTTY_READ_ONLY` | `false` | Start with the agent's input denied. `Ctrl-]` `a` allows it. |
 | `mcp --read-max` | `COTTY_READ_MAX` | `32KiB` | Most output one read returns. Older output beyond it is dropped. |
 | `mcp --tail-lines` | `COTTY_TAIL_LINES` | `50` | Lines a read returns when it has no previous read to continue from. |
@@ -74,6 +75,13 @@ Sizes take a unit of B, K, KB, KiB, M, MB or MiB, all powers of 1024. To change 
 
 ```sh
 codex mcp add cotty -- cotty mcp --read-max 64KiB --max-timeout 30m
+```
+
+To hide several strings in every session, list them in `COTTY_REDACT`, one per line:
+
+```sh
+export COTTY_REDACT='hunter2
+/token=\S+/'
 ```
 
 ```
@@ -133,4 +141,5 @@ The command runs with `COTTY_SESSION=<name>` in its environment.
 
 - The agent sees the output from the start of the session, up to `--buffer-size`. The log keeps all of it.
 - Passwords you type at a prompt that turns echo off, as `ssh` and `sudo` do, never appear in the output, so the agent does not see them.
+- With `--redact`, the agent and the log get `[REDACTED]` in place of what matches, while your terminal shows it as it is. The agent is told how many strings the session hides. A match does not span lines. A keyword cut off at the end of the output is held back from the agent until the rest arrives. A regular expression cannot be held back that way, so what arrived before the match was complete, such as the start of a secret you type with echo on, may reach the agent; use `Ctrl-]` `p` for that.
 - To show something the agent should not see, such as a password typed with echo on or a file with secrets, press `Ctrl-]` `p` first and again when done. Until then the output is shown only on your terminal: it is kept neither for the agent nor in the log, and the agent is told that the output is paused.
