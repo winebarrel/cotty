@@ -18,7 +18,9 @@ const mcpInstructions = `cotty gives you terminals that the user started with "c
 
 Call list_sessions to find them. To run something, call send and then read. read returns the output that arrived since your previous read of that session, so nothing is missed between calls. Use wait_for to wait for a prompt or other text, or idle_ms to wait until the output settles.
 
-The user can deny your input with a key binding; send then fails, and you should ask the user rather than retry. The user can also pause the output, for example while a secret is on the screen; read then says so, and you should wait for the user rather than act on what you cannot see.`
+The user can deny your input with a key binding; send then fails, and you should ask the user rather than retry. The user can also pause the output, for example while a secret is on the screen; read then says so, and you should wait for the user rather than act on what you cannot see.
+
+The user can also have a session hide given strings, such as passwords and tokens; list_sessions shows how many in redacts. Hidden text appears as [REDACTED]. Do not try to reveal it, and ask the user when you need it.`
 
 // MCPCmd serves the sessions to an agent over MCP on stdio.
 type MCPCmd struct {
@@ -262,6 +264,10 @@ func formatRead(r *readReply, waitFor string) string {
 		} else {
 			notes = append(notes, "timed out waiting for output to settle")
 		}
+	}
+
+	if r.Redacted {
+		notes = append(notes, "[REDACTED] marks text the user hid")
 	}
 
 	if r.Closed {

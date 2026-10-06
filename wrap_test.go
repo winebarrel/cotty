@@ -327,6 +327,45 @@ func TestWrapPause(t *testing.T) {
 	assert.Contains(string(data), "[cotty: the user paused the output here]")
 }
 
+func TestWrapRedact(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+	ts := startWrap(t, shortTempDir(t), &WrapCmd{Name: "redact", Redact: []string{"hunter2", `/token=\w+/`}, Command: []string{"cat"}})
+
+	resp, err := ts.call(&request{Op: opInfo})
+	require.NoError(err)
+	assert.Equal(2, resp.Info.Redacts)
+
+	ts.stdin.Write([]byte("pw hunter2 token=abc ok\r"))
+
+	resp, err = ts.call(&request{Op: opRead, WaitFor: `ok\n.*ok\n`, TimeoutMs: 5000})
+	require.NoError(err)
+	require.True(resp.Read.Matched)
+	assert.True(resp.Read.Redacted)
+	assert.Equal("pw [REDACTED] [REDACTED] ok\npw [REDACTED] [REDACTED] ok\n", resp.Read.Output)
+
+	// The user's terminal is left as it is.
+	assert.Contains(ts.out.String(), "pw hunter2 token=abc ok")
+
+	_, err = ts.call(&request{Op: opSend, Data: "\x04"})
+	require.NoError(err)
+	require.NoError(ts.wait(t))
+
+	logs, err := filepath.Glob(filepath.Join(ts.ctx.Home, "log", "redact-*.log"))
+	require.NoError(err)
+	require.Len(logs, 1)
+
+	data, err := os.ReadFile(logs[0])
+	require.NoError(err)
+	assert.NotContains(string(data), "hunter2")
+	assert.NotContains(string(data), "abc")
+}
+
+func TestWrapRedactInvalid(t *testing.T) {
+	err := (&WrapCmd{Name: "bad", Redact: []string{"/(/"}, Command: []string{"true"}}).Run(&Context{Home: shortTempDir(t), Stdin: os.Stdin, Stdout: &syncBuffer{}})
+	assert.ErrorContains(t, err, "--redact #1")
+}
+
 func TestWrapBadRequests(t *testing.T) {
 	ts := startSession(t, shortTempDir(t), "bad", "cat")
 
