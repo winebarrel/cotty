@@ -108,6 +108,7 @@ Commands:
 |------|--------|
 | `Ctrl-]` `a` | Allow or deny the agent's input (allowed at start unless `--read-only`) |
 | `Ctrl-]` `p` | Pause or resume the output to the agent and the log |
+| `Ctrl-]` `k` | Kill the command with `SIGKILL`, which ends the session |
 | `Ctrl-]` `?` | Show help |
 | `Ctrl-]` `Ctrl-]` | Send `Ctrl-]` to the command |
 

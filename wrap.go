@@ -384,9 +384,21 @@ func (s *wrapSession) runPrefixCommand(cmd byte) {
 		paused := !s.paused.Load()
 		s.setPaused(paused)
 		s.notify("agent output: " + pausedWord(paused))
+	case prefixKill:
+		s.notify("killing the command")
+		s.kill()
 	case prefixHelp:
-		s.notify(fmt.Sprintf("Ctrl-] a: allow/deny agent input (now %s), Ctrl-] p: pause/resume agent output (now %s), Ctrl-] Ctrl-]: send Ctrl-]",
+		s.notify(fmt.Sprintf("Ctrl-] a: allow/deny agent input (now %s), Ctrl-] p: pause/resume agent output (now %s), Ctrl-] k: kill the command, Ctrl-] Ctrl-]: send Ctrl-]",
 			allowedWord(s.agentInput.Load()), pausedWord(s.paused.Load())))
+	}
+}
+
+// kill sends SIGKILL to the command, for when it no longer responds to the
+// keys. The command leads a session of its own, so its process group is
+// killed with it, including what it runs in the foreground.
+func (s *wrapSession) kill() {
+	if err := syscall.Kill(-s.info.PID, syscall.SIGKILL); err != nil {
+		syscall.Kill(s.info.PID, syscall.SIGKILL) //nolint:errcheck
 	}
 }
 

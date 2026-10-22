@@ -327,6 +327,28 @@ func TestWrapPause(t *testing.T) {
 	assert.Contains(string(data), "[cotty: the user paused the output here]")
 }
 
+func TestWrapKill(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	// The command ignores the usual signals and keeps a child running in its
+	// process group.
+	ts := startSession(t, shortTempDir(t), "kill", "sh", "-c", `trap "" HUP INT QUIT TERM; echo ready; while :; do sleep 10; done`)
+
+	resp, err := ts.call(&request{Op: opRead, WaitFor: `ready\n`, TimeoutMs: 5000})
+	require.NoError(err)
+	require.True(resp.Read.Matched)
+
+	ts.stdin.Write([]byte{prefixKey, prefixKill})
+
+	err = ts.wait(t)
+	var exitErr *ExitError
+	require.ErrorAs(err, &exitErr)
+	assert.Equal(1, exitErr.Code)
+	assert.Contains(ts.out.String(), "[cotty] killing the command")
+	assert.Contains(ts.out.String(), `[cotty] session "kill" closed`)
+}
+
 func TestWrapRedact(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
