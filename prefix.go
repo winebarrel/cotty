@@ -7,6 +7,7 @@ const prefixKey = 0x1d
 const (
 	prefixToggleAgent = 'a'
 	prefixTogglePause = 'p'
+	prefixKill        = 'k'
 	prefixHelp        = '?'
 )
 
@@ -32,7 +33,7 @@ func (f *prefixFilter) Filter(p []byte) (forward []byte, commands []byte) {
 			switch c {
 			case prefixKey:
 				forward = append(forward, c)
-			case prefixToggleAgent, prefixTogglePause, prefixHelp:
+			case prefixToggleAgent, prefixTogglePause, prefixKill, prefixHelp:
 				commands = append(commands, c)
 			}
 		case c == prefixKey:
